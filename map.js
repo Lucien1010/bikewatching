@@ -14,6 +14,15 @@ const map = new mapboxgl.Map({
   maxZoom: 18,
 });
 
+const svg = d3.select("#map").select("svg");
+
+function getCoords(station) {
+  const point = new mapboxgl.LngLat(+station.lon, +station.lat);
+  const { x, y } = map.project(point);
+
+  return { cx: x, cy: y };
+}
+
 map.on("load", async () => {
   map.addSource("boston_route", {
     type: "geojson",
@@ -58,6 +67,31 @@ map.on("load", async () => {
     let stations = jsonData.data.stations;
 
     console.log("Stations Array:", stations);
+
+    const circles = svg
+      .selectAll("circle")
+      .data(stations)
+      .enter()
+      .append("circle")
+      .attr("r", 4)
+      .attr("fill", "#2563EB")
+      .attr("stroke", "white")
+      .attr("stroke-width", 1.2)
+      .attr("opacity", 0.75);
+
+    function updatePositions() {
+      circles
+      .attr("cx", (d) => getCoords(d).cx)
+      .attr("cy", (d) => getCoords(d).cy);
+    }
+
+    updatePositions();
+
+    map.on("move", updatePositions);
+    map.on("zoom", updatePositions);
+    map.on("resize", updatePositions);
+    map.on("moveend", updatePositions);
+
   } catch (error) {
     console.error("Error loading JSON:", error);
   }
