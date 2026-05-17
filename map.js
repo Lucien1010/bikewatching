@@ -23,6 +23,18 @@ function getCoords(station) {
   return { cx: x, cy: y };
 }
 
+function formatTime(minutes) {
+  const date = new Date(0, 0, 0, 0, minutes);
+
+  return date.toLocaleString("en-US", {
+    timeStyle: "short",
+  });
+}
+
+function minutesSinceMidnight(date) {
+    return date.getHours() * 60 + date.getMinutes();
+}
+
 map.on("load", async () => {
   map.addSource("boston_route", {
     type: "geojson",
@@ -58,26 +70,86 @@ map.on("load", async () => {
 
   let jsonData;
 
+  const timeSlider = document.getElementById("time-slider");
+  const selectedTime = document.getElementById("selected-time");
+  const anyTimeLabel = document.getElementById("any-time");
+
+  selectedTime.style.display = "none";
+
   try {
     const jsonurl = "https://dsc106.com/labs/lab07/data/bluebikes-stations.json";
     jsonData = await d3.json(jsonurl);
 
+    const trips = await d3.csv(
+        "https://dsc106.com/labs/lab07/data/bluebikes-traffic-2024-03.csv",
+        (trip) => {
+            trip.started_at = new Date(trip.started_at);
+            trip.ended_at = new Date(trip.ended_at);
+
+            return trip;
+        }
+    );
+
     console.log("Loaded JSON Data:", jsonData);
+    console.log("Trips Data:", trips);
 
     let stations = jsonData.data.stations;
 
     console.log("Stations Array:", stations);
+
+    const departures = d3.rollup(
+      trips,
+      (v) => v.length,
+      (d) => d.start_station_id
+    );
+
+    const arrivals = d3.rollup(
+      trips,
+      (v) => v.length,
+      (d) => d.end_station_id
+    );
+
+    stations = stations.map((station) => {
+      let id = station.short_name;
+
+      station.arrivals = arrivals.get(id) ?? 0;
+      station.departures = departures.get(id) ?? 0;
+      station.totalTraffic = station.arrivals + station.departures;
+
+      return station;
+    });
+
+    console.log(stations);
+
+    const radiusScale = d3
+      .scaleSqrt()
+      .domain([0, d3.max(stations, (d) => d.totalTraffic)])
+      .range([0, 25]);
+
+    const stationFlow = d3
+      .scaleQuantize()
+      .domain([0, 1])
+      .range([0, 0.5, 1]);
 
     const circles = svg
       .selectAll("circle")
       .data(stations)
       .enter()
       .append("circle")
-      .attr("r", 4)
+      .attr("r", (d) => radiusScale(d.totalTraffic))
       .attr("fill", "#2563EB")
       .attr("stroke", "white")
       .attr("stroke-width", 1.2)
-      .attr("opacity", 0.75);
+      .attr("fill-opacity", 0.6)
+      .attr("stroke-opacity", 0.9)
+      .style("--departure-ratio", (d) => stationFlow(d.departures / d.totalTraffic))
+      .each(function (d) {
+        d3.select(this)
+          .append("title")
+          .text(
+            `${d.totalTraffic} trips (${d.departures} departures, ${d.arrivals} arrivals)`
+          );
+      });
 
     function updatePositions() {
       circles
@@ -92,6 +164,53 @@ map.on("load", async () => {
     map.on("resize", updatePositions);
     map.on("moveend", updatePositions);
 
+    timeSlider.addEventListener("input", () => {
+      const minutes = Number(timeSlider.value);
+
+      selectedTime.textContent = formatTime(minutes);
+
+      if (minutes === -1) {
+        anyTimeLabel.style.display = "block";
+        selectedTime.style.display = "none";
+      } else {
+        anyTimeLabel.style.display = "none";
+        selectedTime.style.display = "block";
+      }
+
+      const filteredTrips =
+        minutes === -1
+            ? trips
+            : trips.filter((trip) => {
+                  const tripMinutes = minutesSinceMidnight(trip.started_at);
+
+                  return Math.abs(tripMinutes - minutes) <= 60;
+              });
+
+      const departures = d3.rollup(
+        filteredTrips,
+        (v) => v.length,
+        (d) => d.start_station_id
+      );
+
+      const arrivals = d3.rollup(
+        filteredTrips,
+        (v) => v.length,
+        (d) => d.end_station_id
+      );
+
+      stations.forEach((station) => {
+        let id = station.short_name;
+
+        station.arrivals = arrivals.get(id) ?? 0;
+        station.departures = departures.get(id) ?? 0;
+
+        station.totalTraffic = station.arrivals + station.departures;
+      });
+
+      circles
+        .attr("r", (d) => radiusScale(d.totalTraffic))
+        .style("--departure-ratio", (d) => stationFlow(d.departures / d.totalTraffic));
+    });
   } catch (error) {
     console.error("Error loading JSON:", error);
   }

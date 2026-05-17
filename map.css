@@ -26,3 +26,38 @@ body {
   height: 100%;
   pointer-events: none;
 }
+
+circle {
+  pointer-events: auto;
+}
+
+header,
+header * {
+    pointer-events: auto;
+}
+
+header {
+  display: flex;
+  align-items: baseline;
+  gap: 1em;
+}
+
+header label {
+  margin-left: auto;
+  font-size: 0.9em;
+}
+
+#time-slider {
+  width: 250px;
+}
+
+time,
+em {
+  display: block;
+  text-align: right;
+  font-size: 0.8em;
+}
+
+em {
+  color: #666;
+}
