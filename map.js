@@ -1,4 +1,5 @@
 import mapboxgl from "https://cdn.jsdelivr.net/npm/mapbox-gl@2.15.0/+esm";
+import * as d3 from "https://cdn.jsdelivr.net/npm/d3@7/+esm";
 
 mapboxgl.accessToken = "pk.eyJ1IjoibG1oc2lhbyIsImEiOiJjbXA5MWlmMXcwaXc1MzRwb2ZvdXo5M3kxIn0.EFz3_BbbTbmA-_-Ga9ptUw";
 
@@ -45,5 +46,20 @@ map.on("load", async () => {
         "line-opacity": 0.7,
     },
   });
+
+  let jsonData;
+
+  try {
+    const jsonurl = "https://dsc106.com/labs/lab07/data/bluebikes-stations.json";
+    jsonData = await d3.json(jsonurl);
+
+    console.log("Loaded JSON Data:", jsonData);
+
+    let stations = jsonData.data.stations;
+
+    console.log("Stations Array:", stations);
+  } catch (error) {
+    console.error("Error loading JSON:", error);
+  }
 });
 
