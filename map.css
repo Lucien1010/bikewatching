@@ -27,8 +27,19 @@ body {
   pointer-events: none;
 }
 
-circle {
+circle,
+.legend div {
   pointer-events: auto;
+
+  --color-departures: steelblue;
+  --color-arrivals: darkorange;
+  --color: color-mix(
+    in oklch,
+    var(--color-departures) calc(100% * var(--departure-ratio)),
+    var(--color-arrivals)
+  );
+
+  fill: var(--color);
 }
 
 header,
@@ -60,4 +71,33 @@ em {
 
 em {
   color: #666;
+}
+
+.legend {
+  display: flex;
+  gap: 1.5em;
+  justify-content: center;
+  align-items: center;
+  margin-top: 1em;
+  font-size: 0.85em;
+}
+
+.legend::before {
+  content: "LEGEND:";
+  font-weight: bold;
+  font-size: 0.8em;
+}
+
+.legend div {
+  display: flex;
+  align-items: center;
+  gap: 0.35em;
+}
+
+.legend div::before {
+  content: "";
+  width: 0.9em;
+  height: 0.9em;
+  border-radius: 50%;
+  background: var(--color);
 }

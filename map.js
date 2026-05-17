@@ -124,7 +124,7 @@ map.on("load", async () => {
     const radiusScale = d3
       .scaleSqrt()
       .domain([0, d3.max(stations, (d) => d.totalTraffic)])
-      .range([0, 25]);
+      .range([0, 40]);
 
     const stationFlow = d3
       .scaleQuantize()
